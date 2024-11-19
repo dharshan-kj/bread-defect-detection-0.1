@@ -1,0 +1,62 @@
+name: Deploy Docker Image to EC2
+
+on:
+  push:
+    branches:
+      - master   # You can replace this with the branch you want to trigger the pipeline on
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Set up AWS credentials
+      - name: Set up AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: Ohio  # Replace with your desired AWS region, e.g., "us-east-1"
+
+      # Step 3: Log in to Amazon ECR
+      - name: Log in to Amazon ECR
+        run: |
+          aws ecr get-login-password --region Ohio | docker login --username AWS --password-stdin 340752842142.dkr.ecr.Ohio.amazonaws.com
+
+      # Step 4: Build the Docker image
+      - name: Build Docker image
+        run: |
+          docker build -t pharm .  # Replace <IMAGE_NAME> with your desired image name
+
+      # Step 5: Tag the Docker image with the ECR repository
+      - name: Tag Docker image
+        run: |
+          docker tag pharm:latest 340752842142.dkr.ecr.pharm.amazonaws.com/pharm:latest
+
+      # Step 6: Push the Docker image to Amazon ECR
+      - name: Push Docker image to Amazon ECR
+        run: |
+          docker push 340752842142.dkr.ecr.Ohio.amazonaws.com/pharm:latest
+
+      # Step 7: Save EC2 private key to file
+      - name: Save EC2 private key to file
+        run: |
+          echo "${{ secrets.EC2_PRIVATE_KEY }}" > private-key.pem
+          chmod 600 private-key.pem
+
+      # Step 8: Deploy the Docker image to EC2
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i private-key.pem Ubuntu@3.133.158.114 << EOF
+            docker pull 340752842142.dkr.ecr.Ohio.amazonaws.com/pharm:latest
+            docker run -d -p 5000:5000 340752842142.dkr.ecr.Ohio.amazonaws.com/pharm:latest
+          EOF
+
+      # Step 9: Clean up (delete private key after use)
+      - name: Clean up
+        run: |
+          rm -f private-key.pem  # Delete the private key after use
