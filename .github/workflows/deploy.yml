@@ -52,8 +52,8 @@ jobs:
       - name: Deploy to EC2
         run: |
           ssh -o StrictHostKeyChecking=no -i private-key.pem Ubuntu@3.133.158.114 << EOF
-            docker pull 340752842142.dkr.ecr.us-east-2.amazonaws.com/pharm:latest
-            docker run -d -p 5000:5000 340752842142.dkr.ecr.us-east-2.amazonaws.com/pharm:latest
+            docker pull 340752842142.dkr.ecr.us-east-2.amazonaws.com/pharm_server:latest
+            docker run -d -p 5000:5000 340752842142.dkr.ecr.us-east-2.amazonaws.com/pharm_server:latest
           EOF
 
       # Step 9: Clean up (delete private key after use)
